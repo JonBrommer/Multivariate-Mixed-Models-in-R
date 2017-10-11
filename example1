@@ -1,0 +1,24 @@
+require(mvtnorm)
+n=200 #number of subject
+V_s = c(2,3) #between-subject variances for trait 1 and 2
+V_e = c(6,6) #error variances for trait 1 and 2
+r_s = 0.6 #correlation between s-values for traits 1 and 2
+r_e = -0.1 #correlation between e-values for traits 1 and 2
+C_s = r_s*sqrt(V_s[1]*V_s[2]) # covariance computed using the correlation
+C_e = r_e*sqrt(V_e[1]*V_e[2]) # covariance computed using the correlation
+#combining the above into covariance matrices
+sigma_s=diag(V_s)
+sigma_s[1,2]=sigma_s[2,1]=C_s
+sigma_e=diag(V_e)
+sigma_e[1,2]=sigma_e[2,1]=C_e
+#generating values
+s=rmvnorm(n=n, sigma=sigma_s) # subject-specific values for n subject
+e=list(trial1=rmvnorm(n=n, sigma=sigma_e), trial2=rmvnorm(n=n, sigma=sigma_e))
+# measured values with first column the ID of the subject, 2nd column the trial
+z=rbind(cbind(1:n,1,s+e$trial1),cbind(1:n,2,s+e$trial2)) 
+#plotting
+layout(matrix(c(1,2),2,1))
+plot(s,pch=19, main="a strong correlation on the level of the subjects")
+plot(z[,3:4],pch=19, main="is not obvious when the residuals are added")
+#the correlation for the z values is:
+cov2cor(sigma_s+sigma_e)
