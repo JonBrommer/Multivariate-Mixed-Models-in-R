@@ -1,7 +1,8 @@
 rm(list=ls())
-#setwd() #set your working directory
+setwd("C:\\Users\\joegbr\\Dropbox\\MMM_methods_paper\\wiki\\datafile") #set your working directory
 require(sommer)
 load("MMM_wiki_data.RData")
+setwd("C:\\Users\\joegbr\\Dropbox\\MMM_methods_paper\\wiki\\sommer") #set your working directory
 #construct the A matrix
 require(pedigreemm)
 ped <- pedigree(sire = gryphonped[,"FATHER"],dam  = gryphonped[,"MOTHER"], label= gryphonped[,"ID"])
@@ -14,33 +15,50 @@ gryphondata$SEX<-as.factor(gryphondata$SEX)
 #run model
 m1<-mmer2(BWT~1,random=~BYEAR, G=list(ANIMAL=A),data=gryphondata)
 summary(m1)
-summary(m1)$w #only prints the variance components
 m2<-mmer2(BWT~1,random=~g(ANIMAL)+BYEAR, G=list(ANIMAL=A),data=gryphondata)
+summary(m2)
+#==================================================
+#Variance-Covariance components:
+#                  VarComp VarCompSE Zratio
+#1.g(ANIMAL).BWT-BWT   2.838    0.5396  5.261
+#2.BYEAR.BWT-BWT       1.234    0.3673  3.360
+#3. units.BWT-BWT       2.962    0.4360  6.793
+#==================================================
 anova(m2,m1)
 #above tests without taking into account the boundary condition
 #the probability (p) to obtain the same chi-square value with boundary condition is
 (1-pchisq(2*(m2$LL-m1$LL),1)+1-pchisq(2*(m2$LL-m1$LL),0))/2
+#calculate phenotypic variance and its SE
+# the pin() function calculates functions of the inferred variance: e.g.
+pin(m2, Vp.BWT~(V1+V2+V3)) #phenotypic variance conditional on fixed effects in the model
+#calculate heritability
+pin(m2, h2.BWT~V2/(V1+V2+V3))
 # ¤¤¤¤¤¤¤¤¤ multivariate mm ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
-m.biv.gen<-mmer2(cbind(BWT,TARSUS)~1,random=~g(ANIMAL)+BYEAR, G=list(ANIMAL=A),data=gryphondata, MVM=TRUE)
+m.biv.gen<-mmer2(cbind(BWT,TARSUS)~1,random=~us(trait):g(ANIMAL)+us(trait):BYEAR, G=list(ANIMAL=A),rcov = ~ us(trait):units,data=gryphondata)
 summary(m.biv.gen)
-#point estimate of correlation derived directly from covariance matrix
-# genetic correlation
-m.biv.gen$var.comp$`g(ANIMAL)`[1,2]/sqrt(m.biv.gen$var.comp$`g(ANIMAL)`[1,1]*m.biv.gen$var.comp$`g(ANIMAL)`[2,2])
-# corr on the level of birth year
-m.biv.gen$var.comp$BYEAR[1,2]/sqrt(m.biv.gen$var.comp$BYEAR[1,1]*m.biv.gen$var.comp$BYEAR[2,2])
-# corr on the level of residuals
-m.biv.gen$var.comp$Residual[1,2]/sqrt(m.biv.gen$var.comp$Residual[1,1]*m.biv.gen$var.comp$Residual[2,2])
 #using the pin: what are the numbers? (get var components from summary(m.biv.gen)) and number them
-#                         VarComp VarCompSE  Zratio
-#1. g(ANIMAL).BWT-BWT        2.03098    0.3673  5.5291
-#2. g(ANIMAL).BWT-TARSUS     1.09726    0.5043  2.1757
-#3. g(ANIMAL).TARSUS-TARSUS  4.72175    1.2081  3.9083
-#4. BYEAR.BWT-BWT            0.83984    0.2482  3.3835
-#5. BYEAR.BWT-TARSUS         0.07436    0.2369  0.3139
-#6. BYEAR.TARSUS-TARSUS      1.21564    0.4441  2.7376
-#7. Residual.BWT-BWT         2.76021    0.3020  9.1405
-#8. Residual.BWT-TARSUS      2.37461    0.4438  5.3503
-#9. Residual.TARSUS-TARSUS  12.85295    1.1393 11.2819
+#==================================================
+#    Multivariate Linear Mixed Model fit by REML    
+#******************  sommer 3.1  ****************** 
+#==================================================
+#        logLik      AIC      BIC Method Converge
+#Value -661.579 1327.158 1338.044    MNR     TRUE
+#==================================================
+#Variance-Covariance components:
+#                         VarComp VarCompSE Zratio
+#1. g(ANIMAL).BWT-BWT        2.76955    0.5346 5.1808
+#2. g(ANIMAL).BWT-TARSUS     1.49218    0.7564 1.9729
+#3. g(ANIMAL).TARSUS-TARSUS  7.13805    1.8675 3.8223
+#4. BYEAR.BWT-BWT            1.24039    0.3684 3.3666
+#5. BYEAR.BWT-TARSUS         0.08291    0.3663 0.2264
+#6. BYEAR.TARSUS-TARSUS      1.98210    0.7159 2.7686
+#7. units.BWT-BWT            3.01411    0.4353 6.9248
+#8. units.BWT-TARSUS         2.88036    0.6547 4.3996
+#9. units.TARSUS-TARSUS     14.70274    1.7019 8.6388
+#==================================================
+#heritabilities
+pin(m.biv.gen,h2.BWT~V1/(V1+V4+V6))
+pin(m.biv.gen,h2.TARS~V3/(V3+V6+V9))
 # genetic correlation
 pin(m.biv.gen,r.A~V2/sqrt(V1*V3))
 # corr on the level of birth year
@@ -49,3 +67,9 @@ pin(m.biv.gen,r.BY~V5/sqrt(V4*V6))
 pin(m.biv.gen,r.res~V8/sqrt(V7*V9))
 # corr on the phenotypic level
 pin(m.biv.gen,r.pheno~(V2+V5+V8)/sqrt((V1+V4+V7)*(V3+V6+V9)))
+#¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+#phenotypic variances
+pin(m.biv.gen, V.pheno.BWT~V1+V4+V7)
+pin(m.biv.gen, V.pheno.TARSUS~V3+V6+V9)
+#phenotypic covariance
+pin(m.biv.gen, C.pheno.BWT.TARS~(V2+V5+V8))
