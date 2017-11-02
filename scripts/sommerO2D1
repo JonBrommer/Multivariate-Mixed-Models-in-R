@@ -32,7 +32,7 @@ anova(m2,m1)
 # the pin() function calculates functions of the inferred variance: e.g.
 pin(m2, Vp.BWT~(V1+V2+V3)) #phenotypic variance conditional on fixed effects in the model
 #calculate heritability
-pin(m2, h2.BWT~V2/(V1+V2+V3))
+pin(m2, h2.BWT~V1/(V1+V2+V3))
 # ¤¤¤¤¤¤¤¤¤ multivariate mm ¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 m.biv.gen<-mmer2(cbind(BWT,TARSUS)~1,random=~us(trait):g(ANIMAL)+us(trait):BYEAR, G=list(ANIMAL=A),rcov = ~ us(trait):units,data=gryphondata)
 summary(m.biv.gen)
